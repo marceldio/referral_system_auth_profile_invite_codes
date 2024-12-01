@@ -57,6 +57,3 @@ class Referral(models.Model):
 
     def __str__(self):
         return f"{self.inviter.phone_number} referred {self.invited.phone_number}"
-
-
-
