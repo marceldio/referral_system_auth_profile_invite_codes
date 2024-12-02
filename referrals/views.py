@@ -78,13 +78,20 @@ class ActivateInviteCodeView(APIView):
         if not invite_code:
             return Response({'error': 'Invite code is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Проверяем, активирован ли уже инвайт-код
         if user.profile.activated_invite_code:
             return Response({'error': 'Invite code already activated'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Проверяем, чтобы пользователь не использовал свой собственный инвайт-код
+        if user.invite_code == invite_code:
+            return Response({'error': 'You cannot activate your own invite code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверяем существование инвайт-кода
         inviter = User.objects.filter(invite_code=invite_code).first()
         if not inviter:
             return Response({'error': 'Invalid invite code'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Сохраняем активированный код
         user.profile.activated_invite_code = invite_code
         user.profile.save()
 

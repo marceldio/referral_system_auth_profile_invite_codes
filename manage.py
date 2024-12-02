@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Django's command-line utility for administrative tasks."""
-import os
+
 import sys
+import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Определяем BASE_DIR относительно settings.py
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Загружаем .env файл из корня проекта
+env_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(env_path)
 
 
 def main():
