@@ -6,7 +6,8 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, phone_number, password=None, **extra_fields):
         if not phone_number:
             raise ValueError("The Phone Number field must be set")
-        extra_fields.setdefault('username', phone_number)  # Устанавливаем username
+        # Устанавливаем username
+        extra_fields.setdefault('username', phone_number)
         user = self.model(phone_number=phone_number, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -30,13 +31,15 @@ class CustomUser(AbstractUser):
 
     # Указываем, что для аутентификации используется phone_number
     USERNAME_FIELD = 'phone_number'
-    REQUIRED_FIELDS = []  # Поля, которые обязательны при создании суперпользователя
+    # Поля, которые обязательны при создании суперпользователя
+    REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
 
     def save(self, *args, **kwargs):
         if not self.username:
-            self.username = self.phone_number  # Автоматически присваиваем username
+            # Автоматически присваиваем username
+            self.username = self.phone_number
         super().save(*args, **kwargs)
 
     def __str__(self):

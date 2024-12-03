@@ -1,37 +1,67 @@
-import random
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserProfileSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+import os
+import random
+from django.core.cache import cache
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from referrals.sms_service import send_sms
+from django.conf import settings
 
 
 User = get_user_model()
 
 
-from rest_framework.permissions import AllowAny
-
 class SendAuthCodeView(APIView):
-    permission_classes = [AllowAny]  # Разрешаем доступ без токена
-    authentication_classes = []  # Отключаем проверку токенов
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         phone_number = request.data.get('phone_number')
         if not phone_number:
             return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Генерируем 4-значный код
         auth_code = random.randint(1000, 9999)
-        cache.set(f'auth_code_{phone_number}', auth_code, timeout=300)  # Сохраняем код в кэше на 5 минут
 
-        # # Имитация отправки кода (в продакшене используем SMS API)
-        # print(f"Auth code for {phone_number}: {auth_code}")
+        # Получаем время жизни кода из .env (сейчас 15мин), значение по умолчанию здесь 5 мин
+        timeout = int(os.getenv('AUTH_CODE_TIMEOUT', 300))
 
-        return Response({'message': 'Auth code sent successfully'}, status=status.HTTP_200_OK)
+        # Сохраняем код в Redis
+        cache.set(f'auth_code_{phone_number}', auth_code, timeout=timeout)
+
+        # Проверяем, включена ли отправка SMS
+        enable_sms = os.getenv('ENABLE_SMS', 'False').lower() == 'true'
+
+        if enable_sms:
+            # Отправляем код через SMS
+            try:
+                message = f"Ваш код для авторизации: {auth_code}"
+                response = send_sms(phone_number, message)
+
+                if response.status_code == 200:
+                    return Response({'message': 'Auth code sent successfully'}, status=status.HTTP_200_OK)
+                else:
+                    return Response(
+                        {'error': 'Failed to send SMS', 'details': response.json()},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except Exception as e:
+                return Response(
+                    {'error': 'Error sending SMS', 'details': str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        else:
+            # Логируем код вместо отправки SMS
+            print(f"Auth code for {phone_number}: {auth_code}")
+            return Response({'message': 'Auth code generated successfully (SMS disabled)'},
+                            status=status.HTTP_200_OK)
 
 
 class VerifyAuthCodeView(APIView):
@@ -43,7 +73,8 @@ class VerifyAuthCodeView(APIView):
         auth_code = request.data.get('auth_code')
 
         if not phone_number or not auth_code:
-            return Response({'error': 'Phone number and auth code are required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Phone number and auth code are required'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         saved_code = cache.get(f'auth_code_{phone_number}')
         if saved_code != int(auth_code):
@@ -84,7 +115,8 @@ class ActivateInviteCodeView(APIView):
 
         # Проверяем, чтобы пользователь не использовал свой собственный инвайт-код
         if user.invite_code == invite_code:
-            return Response({'error': 'You cannot activate your own invite code'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'You cannot activate your own invite code'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Проверяем существование инвайт-кода
         inviter = User.objects.filter(invite_code=invite_code).first()

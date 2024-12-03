@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "referrals",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -141,6 +143,24 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Referral System API',
+    'DESCRIPTION': 'API для системы реферальных кодов.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': True,  # Если нужно включить схему в публичный доступ
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': False,
+}
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Увеличиваем время жизни до 60 минут
+    # 'REFRESH_TOKEN_LIFETIME': timedelta(days=7),    # Время жизни refresh-токена (по желанию)
+    # 'ROTATE_REFRESH_TOKENS': True,                 # Обновлять refresh-токен при каждом запросе
+    # 'BLACKLIST_AFTER_ROTATION': True,              # Добавлять старые refresh-токены в blacklist
 }
 
 SMS_AERO_API_KEY = os.getenv('SMS_AERO_API_KEY')
