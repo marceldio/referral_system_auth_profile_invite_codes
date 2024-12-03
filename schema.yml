@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: Referral System API
+  version: 1.0.0
+  description: API для системы реферальных кодов.
+paths:
+  /api/auth/send-code/:
+    post:
+      operationId: api_auth_send_code_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendAuthCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendAuthCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendAuthCodeRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          description: Auth code sent successfully
+        '400':
+          description: Phone number is required or invalid
+        '500':
+          description: Error sending SMS
+  /api/auth/verify-code/:
+    post:
+      operationId: api_auth_verify_code_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyAuthCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyAuthCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyAuthCodeRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          description: User verified successfully
+        '400':
+          description: Phone number and auth code are required
+        '404':
+          description: Invalid or expired auth code
+  /api/profile/:
+    get:
+      operationId: api_profile_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+        '403':
+          description: User not authenticated
+  /api/profile/invite/:
+    post:
+      operationId: api_profile_invite_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateInviteCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ActivateInviteCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActivateInviteCodeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Invite code activated successfully
+        '400':
+          description: Invite code is required or already activated
+        '404':
+          description: Invalid invite code
+  /api/schema/:
+    get:
+      operationId: api_schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    ActivateInviteCodeRequest:
+      type: object
+      properties:
+        invite_code:
+          type: string
+          minLength: 1
+          description: Введите инвайт-код, который вы хотите активировать.
+      required:
+      - invite_code
+    SendAuthCodeRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          minLength: 1
+          description: Введите номер телефона в формате +7XXXXXXXXXX.
+      required:
+      - phone_number
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        phone_number:
+          type: string
+          pattern: ^\+7\d{10}$
+        invite_code:
+          type: string
+          nullable: true
+          maxLength: 6
+        profile:
+          type: object
+          properties:
+            activated_invite_code:
+              type: string
+              nullable: true
+          readOnly: true
+        referrals:
+          type: array
+          items:
+            type: object
+            properties:
+              invited_user_id:
+                type: integer
+              invited_phone_number:
+                type: string
+          readOnly: true
+      required:
+      - id
+      - phone_number
+      - profile
+      - referrals
+    VerifyAuthCodeRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          minLength: 1
+          description: Введите номер телефона в формате +7XXXXXXXXXX.
+          pattern: ^\+7\d{10}$
+        auth_code:
+          type: string
+          minLength: 1
+          description: Введите код, отправленный на ваш номер телефона.
+      required:
+      - auth_code
+      - phone_number
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,29 +1,42 @@
 from django.contrib.auth import get_user_model
+from referrals.sms_service import send_sms
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
-from .serializers import UserProfileSerializer
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-import os
-import random
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
-from referrals.sms_service import send_sms
-from django.conf import settings
-
+import random
+import os
+from .serializers import (
+    SendAuthCodeSerializer,
+    VerifyAuthCodeSerializer,
+    ActivateInviteCodeSerializer,
+    UserProfileSerializer,
+)
 
 User = get_user_model()
 
 
+@extend_schema(
+    request=SendAuthCodeSerializer,
+    responses={
+        200: OpenApiResponse(description="Auth code sent successfully"),
+        400: OpenApiResponse(description="Phone number is required or invalid"),
+        500: OpenApiResponse(description="Error sending SMS"),
+    },
+)
 class SendAuthCodeView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
     def post(self, request):
-        phone_number = request.data.get('phone_number')
+        serializer = SendAuthCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone_number = serializer.validated_data['phone_number']
+        # phone_number = request.data.get('phone_number')
         if not phone_number:
             return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -64,13 +77,43 @@ class SendAuthCodeView(APIView):
                             status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    request=VerifyAuthCodeSerializer,
+    responses={
+        200: OpenApiResponse(
+            description="User verified successfully",
+            examples={
+                'application/json': {
+                    'user_id': 1,
+                    'access_token': 'example_access_token',
+                },
+            },
+        ),
+        400: OpenApiResponse(
+            description="Phone number and auth code are required",
+            examples={
+                'application/json': {'error': 'Phone number and auth code are required'},
+            },
+        ),
+        404: OpenApiResponse(
+            description="Invalid or expired auth code",
+            examples={
+                'application/json': {'error': 'Invalid or expired auth code'},
+            },
+        ),
+    },
+)
 class VerifyAuthCodeView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
     def post(self, request):
-        phone_number = request.data.get('phone_number')
-        auth_code = request.data.get('auth_code')
+        serializer = VerifyAuthCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone_number = serializer.validated_data['phone_number']
+        auth_code = serializer.validated_data['auth_code']
+        # phone_number = request.data.get('phone_number')
+        # auth_code = request.data.get('auth_code')
 
         if not phone_number or not auth_code:
             return Response({'error': 'Phone number and auth code are required'},
@@ -99,12 +142,39 @@ class VerifyAuthCodeView(APIView):
         })
 
 
+@extend_schema(
+    request=ActivateInviteCodeSerializer,
+    responses={
+        200: OpenApiResponse(
+            description="Invite code activated successfully",
+            examples={
+                'application/json': {'message': "Invite code activated successfully"},
+            },
+        ),
+        400: OpenApiResponse(
+            description="Invite code is required or already activated",
+            examples={
+                'application/json': {'error': "Invite code is required or already activated"},
+            },
+        ),
+        404: OpenApiResponse(
+            description="Invalid invite code",
+            examples={
+                'application/json': {'error': "Invalid invite code"},
+            },
+        ),
+    },
+)
 class ActivateInviteCodeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        serializer = ActivateInviteCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invite_code = serializer.validated_data['invite_code']
+        # invite_code = request.data.get('invite_code')
+
         user = request.user
-        invite_code = request.data.get('invite_code')
 
         if not invite_code:
             return Response({'error': 'Invite code is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -134,6 +204,12 @@ class ActivateInviteCodeView(APIView):
         return Response({'message': 'Invite code activated successfully'})
 
 
+@extend_schema(
+    responses={
+        200: UserProfileSerializer,
+        403: OpenApiResponse(description="User not authenticated"),
+    },
+)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 

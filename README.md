@@ -38,8 +38,67 @@
 ●	Интерфейс на Django Templates
 ●	Документирование апи при помощи ReDoc
 ●	Docker
-Ограничения на стек технологий:
-●	Python
-●	Django, DRF
-●	PostgreSQL
-●	Остальное на ваше усмотрение :)
+
+
+# Referral System
+
+Referral System — это веб-приложение для управления пользователями, 
+их реферальными кодами и профилями.
+
+## Основные функции
+- Отправка и проверка кода авторизации по номеру телефона.
+- Активация реферальных кодов.
+- Управление профилями пользователей.
+- Генерация токенов доступа для авторизации.
+
+## Технологии
+- **Python** 3.12
+- **Django** 5.1
+- **Django REST Framework**
+- **PostgreSQL**
+- **Redis**
+- **Docker**
+
+## Установка и запуск
+
+### Локальная установка
+1. **Клонируйте репозиторий:**
+   ```bash
+   git clone https://github.com/marceldio/referral_system_auth_profile_invite_codes.git
+   cd referral_system
+
+2. Установите зависимости (используется Poetry):
+poetry install
+
+3. Выполните миграции:
+python manage.py migrate
+
+4. Настройте файл .env:
+Укажите данные для подключения к SMS-сервису smsaero.ru.
+Если вы хотите отправлять реальные SMS, добавьте параметр:
+ENABLE_SMS=True
+Если ENABLE_SMS=False(как по-умолчанию), код авторизации будет отображаться:
+В терминале.
+В Redis:
+redis-cli
+SELECT 1
+GET ":1:auth_code_+7ваш_номер_телефона"
+
+5. Запустите сервер:
+python manage.py runserver
+
+6. Документация API:
+Swagger: http://127.0.0.1:8000/swagger/
+ReDoc: http://127.0.0.1:8000/redoc/
+
+7. Тестирование
+Запуск тестов:
+poetry run pytest referrals/tests/
+Проверка покрытия тестами:
+poetry run pytest --cov=referrals referrals/tests/
+
+8. Postman коллекция с запросами находится в корне проекта.
+ReferralSystemAuthAPI.postman_collection.json
+
+
+
